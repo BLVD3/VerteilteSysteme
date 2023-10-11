@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-
-	"hhn.de/nvogel1/gochat/shared/messages"
 )
 
 const (
@@ -29,6 +27,7 @@ func startServer(connType string, host string, port string) error {
 }
 
 func handleConnection(conn net.Conn) {
+    defer conn.Close()
 	reader := json.NewDecoder(conn)
 	for {
 		var m map[string] any
@@ -37,11 +36,12 @@ func handleConnection(conn net.Conn) {
 			fmt.Println("Decoding Error: ", decErr)
 			break
 		}
-		//Handle the map
-		t := messages.GetMessageType(m)
-		fmt.Println(t)
+
 	}
-	conn.Close()
+}
+
+func handleData(conn *net.Conn, m *map[string]any) bool {
+
 }
 
 func main() {

@@ -42,11 +42,11 @@ func GetMessageTypeFromBytes(message []byte) MessageType {
 	if err != nil {
 		return Undefined
 	}
-	return GetMessageType(m)
+	return GetMessageType(&m)
 }
 
-func GetMessageType(message map[string]any) MessageType {
-	s, ok := message[TypeJsonKey].(string)
+func GetMessageType(message *map[string]any) MessageType {
+	s, ok := (*message)[TypeJsonKey].(string)
 	if !ok {
 		return Undefined
 	}
