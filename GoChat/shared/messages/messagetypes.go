@@ -2,9 +2,16 @@ package messages
 
 import (
 	"encoding/json"
+	"errors"
 )
 
-const TypeJsonKey string = "messagetype"
+const (
+    TypeJsonKey string = "messagetype"
+    TextJsonKey string = "text"
+    TimeJsonKey string = "time"
+    SenderJsonKey string = "sender"
+    NameJsonKey string = "name"
+)
 
 type MessageType int
 const (
@@ -58,4 +65,19 @@ func StringToMessageType(s string) MessageType {
 		return NameResponse
 	}
 	return Undefined
+}
+
+func assertStringFromJson(key string, m *map[string]any) (string, error) {
+    var ok bool
+    var temp any
+    var s string
+    temp, ok = (*m)[key]
+    if !ok {
+        return "", errors.New("error getting string from map. Map does not contain the " + key + " key")
+    }
+    s, ok = temp.(string)
+    if !ok {
+        return "", errors.New("error getting string from map. " + key + " is not a string")
+    }
+    return s, nil
 }
