@@ -6,6 +6,8 @@ type NameResponseMessage struct {
     Name string
 }
 
+const NameRequestMessageString string = "{\"" + TypeJsonKey +  "\": \"namerequest\"}"
+
 func GetNameResponseMessage(m *map[string]any) (*NameResponseMessage, error) {
     name, err := assertStringFromJson(NameJsonKey, m)
     if err != nil {
@@ -24,3 +26,4 @@ func (message *NameResponseMessage) MarshalJSON() ([]byte, error) {
 
     return res, nil
 }
+

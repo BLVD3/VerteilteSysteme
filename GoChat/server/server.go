@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"sync"
 
@@ -57,12 +58,27 @@ func (server *ChatServer) acceptConnections() {
 
 func (server *ChatServer) handleConnection(conn net.Conn) {
     defer conn.Close()
-    server.addClient(conn)
+    reader := json.NewDecoder(conn)
+    server.addClient(&conn, reader)
 
 }
 
-func (server *ChatServer) addClient(conn net.Conn) error {
+func (server *ChatServer) addClient(conn *net.Conn, reader *json.Decoder) error {
+    (*conn).Write([]byte(messages.NameRequestMessageString))
 
+    var m map[string]any
+    var err error
+
+    err = reader.Decode(&m)
+    if err != nil {
+        return err
+    }
+
+    if messages.GetMessageType(&m) != messages.NameResponse {
+        return errors.New("failed to read name from client: ")
+    }
+
+    return nil
 }
 
 func (server *ChatServer) sendMessages() {
