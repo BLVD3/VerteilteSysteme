@@ -10,7 +10,7 @@ import (
 )
 
 type Client struct {
-    conn net.Conn
+    conn *net.Conn
     name string
 }
 
@@ -67,17 +67,22 @@ func (server *ChatServer) addClient(conn *net.Conn, reader *json.Decoder) error 
     (*conn).Write([]byte(messages.NameRequestMessageString))
 
     var m map[string]any
-    var err error
-
-    err = reader.Decode(&m)
+    err := reader.Decode(&m)
     if err != nil {
         return err
     }
-
-    if messages.GetMessageType(&m) != messages.NameResponse {
-        return errors.New("failed to read name from client: ")
+    var t = messages.GetMessageType(&m)
+    if t != messages.NameResponse {
+        return errors.New("failed to read name from client: Expected NameResponseMessage got " + t.String())
     }
-
+    message, err := messages.GetNameResponseMessage(&m)
+    if err != nil {
+        return err;
+    }
+    client := Client{conn, message.Name}
+    server.cLock.Lock()
+    server.clients = append(server.clients, &client)
+    server.cLock.Unlock()
     return nil
 }
 
@@ -86,11 +91,8 @@ func (server *ChatServer) sendMessages() {
         b, _ := json.Marshal(m)
         server.cLock.RLock()
         for _, c := range server.clients {
-            c.conn.Write(b)
+            (*c.conn).Write(b)
         }
         server.cLock.RUnlock()
     }
 }
-
-
-
