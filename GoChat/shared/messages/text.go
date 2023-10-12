@@ -1,5 +1,7 @@
 package messages
 
+import "encoding/json"
+
 type SendTextMessage struct {
     Text string
     Time string
@@ -32,6 +34,18 @@ func GetSendTextMessage(m *map[string]any) (*SendTextMessage, error) {
     return &message, nil
 }
 
+func (message *SendTextMessage) MarshalJSON() ([]byte, error) {
+    var m map[string]any = map[string]any{}
+
+    m[TypeJsonKey] = SendText.String()
+    m[TextJsonKey] = message.Text
+    m[TimeJsonKey] = message.Time
+
+    res, _ := json.Marshal(m)
+
+    return res, nil
+}
+
 func GetReceiveTextMessage(m *map[string]any) (*ReceiveTextMessage, error) {
     var message ReceiveTextMessage
     var text string
@@ -58,4 +72,17 @@ func GetReceiveTextMessage(m *map[string]any) (*ReceiveTextMessage, error) {
     message.Time = time
     message.Sender = sender
     return &message, nil
+}
+
+func (message *ReceiveTextMessage) MarshalJSON() ([]byte, error) {
+    var m map[string]any = map[string]any{}
+
+    m[TypeJsonKey] = SendText.String()
+    m[TextJsonKey] = message.Text
+    m[TimeJsonKey] = message.Time
+    m[SenderJsonKey] = message.Sender
+
+    res, _ := json.Marshal(m)
+
+    return res, nil
 }

@@ -17,7 +17,7 @@ type ChatServer struct {
     ip string
     clients []*Client
     cLock sync.RWMutex
-    ch chan messages.SendTextMessage
+    ch chan messages.ReceiveTextMessage
     close bool
     listener net.Listener
 }
@@ -27,7 +27,7 @@ func StartChatServer(host string, port string) (*ChatServer, error) {
         ip:      host + ":" + port,
         clients: make([]*Client, 0),
         cLock:   sync.RWMutex{},
-        ch:      make(chan messages.SendTextMessage),
+        ch:      make(chan messages.ReceiveTextMessage),
         close:   false,
     }
     ln, err := net.Listen("tcp", cs.ip)
@@ -67,7 +67,7 @@ func (server *ChatServer) addClient(conn net.Conn) error {
 
 func (server *ChatServer) sendMessages() {
     for m := range server.ch {
-        b, _ := json.Marshal(m) //TODO Improve Marshal
+        b, _ := json.Marshal(m)
         server.cLock.RLock()
         for _, c := range server.clients {
             c.conn.Write(b)
