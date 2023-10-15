@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"net"
 	"sync"
 
@@ -10,17 +9,16 @@ import (
 )
 
 type Client struct {
-    conn *net.Conn
-    name string
+    connection  *net.Conn
 }
 
 type ChatServer struct {
-    ip string
-    clients []*Client
-    cLock sync.RWMutex
-    ch chan messages.ReceiveTextMessage
-    close bool
-    listener net.Listener
+    ip          string
+    clients     []*Client
+    cLock       sync.RWMutex
+    ch chan     messages.TextMessage
+    running     bool
+    listener    net.Listener
 }
 
 func StartChatServer(host string, port string) (*ChatServer, error) {
@@ -28,13 +26,15 @@ func StartChatServer(host string, port string) (*ChatServer, error) {
         ip:      host + ":" + port,
         clients: make([]*Client, 0),
         cLock:   sync.RWMutex{},
-        ch:      make(chan messages.ReceiveTextMessage),
-        close:   false,
+        ch:      make(chan messages.TextMessage),
+        running: true,
     }
+
     ln, err := net.Listen("tcp", cs.ip)
     if err != nil {
         return nil, err
     }
+
     cs.listener = ln
     go cs.acceptConnections()
     go cs.sendMessages()
@@ -46,7 +46,7 @@ func (server *ChatServer) acceptConnections() {
     defer close(server.ch)
     for {
         conn, err := server.listener.Accept()
-        if server.close {
+        if !server.running {
             break
         }
         if err != nil {
@@ -59,31 +59,18 @@ func (server *ChatServer) acceptConnections() {
 func (server *ChatServer) handleConnection(conn net.Conn) {
     defer conn.Close()
     reader := json.NewDecoder(conn)
-    server.addClient(&conn, reader)
+    client := Client{&conn}
+    server.addClient(&client)
+    defer server.removeClient(&client)
 
-}
-
-func (server *ChatServer) addClient(conn *net.Conn, reader *json.Decoder) error {
-    (*conn).Write([]byte(messages.NameRequestMessageString))
-
-    var m map[string]any
-    err := reader.Decode(&m)
-    if err != nil {
-        return err
+    var message messages.TextMessage
+    for {
+        err := reader.Decode(&message)
+        if err != nil {
+            break
+        }
+        server.ch <- message
     }
-    var t = messages.GetMessageType(&m)
-    if t != messages.NameResponse {
-        return errors.New("failed to read name from client: Expected NameResponseMessage got " + t.String())
-    }
-    message, err := messages.GetNameResponseMessage(&m)
-    if err != nil {
-        return err;
-    }
-    client := Client{conn, message.Name}
-    server.cLock.Lock()
-    server.clients = append(server.clients, &client)
-    server.cLock.Unlock()
-    return nil
 }
 
 func (server *ChatServer) sendMessages() {
@@ -91,8 +78,32 @@ func (server *ChatServer) sendMessages() {
         b, _ := json.Marshal(m)
         server.cLock.RLock()
         for _, c := range server.clients {
-            (*c.conn).Write(b)
+            (*c.connection).Write(b)
         }
         server.cLock.RUnlock()
     }
+}
+
+func (server *ChatServer) addClient(client *Client) {
+    server.cLock.Lock()
+    server.clients = append(server.clients, client)
+    server.cLock.Unlock()
+}
+
+func (server *ChatServer) removeClient(client *Client) {
+    var rIndex int
+    for i, c := range server.clients {
+        if c == client {
+            rIndex = i
+            break
+        }
+    }
+    server.cLock.Lock()
+    server.clients = append(server.clients[:rIndex], server.clients[rIndex+1:]...)
+    server.cLock.Unlock()
+}
+
+func (server *ChatServer) StopServer() {
+    server.running = false
+    server.listener.Close()
 }
