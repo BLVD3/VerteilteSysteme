@@ -57,7 +57,7 @@ func (server *ChatServer) acceptConnections() {
 }
 
 func (server *ChatServer) handleConnection(conn net.Conn) {
-    defer conn.Close()
+    defer server.StopServer()
     reader := json.NewDecoder(conn)
     client := Client{&conn}
     server.addClient(&client)
@@ -104,6 +104,10 @@ func (server *ChatServer) removeClient(client *Client) {
 }
 
 func (server *ChatServer) StopServer() {
+    if !server.running {
+        return
+    }
     server.running = false
     server.listener.Close()
+    close(server.ch)
 }
