@@ -1,3 +1,3 @@
 module hhn.de/nvogel1/gochat
 
-go 1.18
+go 1.21.1
